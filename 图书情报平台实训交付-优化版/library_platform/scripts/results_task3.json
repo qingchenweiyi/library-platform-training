@@ -1,0 +1,31 @@
+{
+  "Q1 price>80 ($gt)": 7,
+  "Q2 stock<10 ($lt)": 8,
+  "Q3 isbn=9787115428028 ($eq)": 1,
+  "Q4 email为空 ($eq:null)": 3,
+  "Q5 排除'人民邮电出版社' ($ne)": 16,
+  "Q6 category in [计算机,经济管理] ($in)": 10,
+  "Q7 rating>4.0 且 category=计算机 ($and)": 7,
+  "Q8 rating<3.5 或 stock=0 ($or)": 1,
+  "Q9 title 含 Python ($regex)": 1,
+  "Q10 tags 同时含 编程,入门 ($all)": 1,
+  "Q11 tags 恰好3个 ($size:3)": 12,
+  "Q12 存在 tags 字段 ($exists:true)": 17,
+  "Q13 _id 为字符串类型 ($type:string)": 1,
+  "Q14 条数": 5,
+  "Q15 投影样例条数": 3,
+  "Q16 全部图书类别清单 (distinct)": [
+    "外语",
+    "数学",
+    "文学",
+    "经济管理",
+    "计算机"
+  ],
+  "U1 stock-5 update_one 匹配/修改数": "matched=1, modified=1",
+  "U2 经济管理类9折 update_many": "matched=3, modified=3",
+  "U3 新增时间戳字段 ($currentDate)": "matched=1, modified=1",
+  "U4 删除 tags 字段 ($unset)": "matched=1, modified=1",
+  "D1 删除一条已归还记录 delete_one": "deleted=1",
+  "D2 清理逾期记录 delete_many": "deleted=5",
+  "D3 replaceOne 替换读者信息": "matched=1, modified=1"
+}
