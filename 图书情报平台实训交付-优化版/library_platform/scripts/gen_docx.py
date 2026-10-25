@@ -97,11 +97,7 @@ body("项目背景：某高校图书馆需建设“图书情报检索与统计�
 body("业务目标：基于 MongoDB 完成数据库部署、数据建模、条件检索、聚合统计、索引优化与访问控制，"
      "并使用 PyMongo 开发菜单式命令行应用，覆盖图书、读者、借阅、统计四大模块。")
 h2("组内分工")
-add_table(["成员", "负责内容"],
-          [["成员 A", "任务一环境部署、任务二建库与数据导入"],
-           ["成员 B", "任务三检索与更新删除、任务四聚合与索引"],
-           ["成员 C", "任务五 PyMongo 程序开发、任务六 Compass 核对与文档整理"]],
-          widths=[3, 13])
+body("本项目由白岩松独自完成，独立承担任务一至任务六全部工作：环境部署、建库与数据导入、条件检索与更新删除、聚合统计与索引优化、PyMongo 程序开发、权限验证与文档整理。")
 
 h1("二、环境与数据建模")
 h2("2.1 部署关键参数")
@@ -115,17 +111,17 @@ body("数据库名 library，共 4 个业务集合与 3 个特殊集合：")
 add_table(["集合", "类型", "关键字段", "文档数"],
           [["books", "普通集合", "isbn,title,author,category,price,stock,rating,tags", "20"],
            ["readers", "普通集合", "card_no,name,college,level,register_date", "16"],
-           ["borrow_logs", "时间序列集合", "borrow_date(time),reader_card,book_isbn,status", "66→24*"],
+           ["borrow_logs", "时间序列集合", "borrow_date(time),reader_card,book_isbn,status", "66→52*"],
            ["category_stats", "普通集合", "聚合结果（_id=类别）", "5"],
            ["book_logs", "固定集合(capped)", "容量 1MB、最多 1000 条", "0"],
            ["book_in_stock", "视图", "基于 books 过滤 stock>0", "19"]],
           widths=[2.8, 2.6, 7.6, 2])
-body("* borrow_logs 导入 66 条流水；时间序列集合设置 expireAfterSeconds=63072000（2 年自动过期）。"
-     "系统当前为 2026-10，TTL 后台任务自动清理了 2024-10 之前的历史借阅记录，实际剩余 24 条"
-     "（2024 年 6 条 + 2025 年 18 条），属预期生命周期行为；任务三 D1/D2 删除演示后再减为 18 条。")
+body("* borrow_logs 导入 66 条流水；时间序列集合设置 expireAfterSeconds=157680000（5 年自动过期）。"
+     "借阅日期分布在 2023—2025 年，系统当前为 2026-10，5 年保留期完整覆盖全部数据，TTL 不清理任何记录，导入即 66 条。"
+     "任务三 D1/D2 删除演示后再删 1 条已归还 + 13 条逾期，变为 52 条。")
 code('db.createCollection("book_logs",{capped:true,size:1048576,max:1000});\n'
      'db.createCollection("borrow_logs",{timeseries:{timeField:"borrow_date",\n'
-     '  metaField:"reader_card",granularity:"hours"},expireAfterSeconds:63072000});\n'
+     '  metaField:"reader_card",granularity:"hours"},expireAfterSeconds:157680000});\n'
      'db.createCollection("book_in_stock",{viewOn:"books",\n'
      '  pipeline:[{$match:{stock:{$gt:0}}}]});')
 
@@ -160,18 +156,18 @@ add_table(["编号", "业务需求", "操作符", "结果条数"],
           widths=[1.6, 5.4, 2.6, 6.4])
 body("更新删除：U1 指定书库存 -5（$inc）；U2 经济管理类 9 折（$mul，matched=3）；"
      "U3 $currentDate 写时间戳；U4 $unset 删除某书 tags；D1 删 1 条已归还记录；"
-     "D2 先预览 5 条逾期记录后 deleteMany 删除；D3 replaceOne 整体替换读者信息（保留 _id）。"
+     "D2 用 deleteMany 删除全部 13 条逾期记录；D3 replaceOne 整体替换读者信息（保留 _id）。"
      "注：borrow_logs 为时间序列集合，D1/D2 依赖 MongoDB 7.0 放开的时间序列删除限制。")
 
-h2("3.2 聚合统计结果（任务四 A1-A9，TTL 后 24 条借阅流水口径）")
+h2("3.2 聚合统计结果（任务四 A1-A9，D1/D2 后 52 条借阅流水口径）")
 bullet("A1 分类统计 5 组：计算机 7 本/均分4.5、文学 5/4.7、经济管理 3/4.2、数学 3/4.67、外语 2/4.35。")
 bullet("A2 出版社 Top5：人民邮电 4、北京大学 3、清华大学 2、中国人民大学 2、电子工业 2。")
 bullet("A3 文档数最多类别（$sortByCount）：计算机（7）。")
 bullet("A4 评分最高 3 本：活着(243)、平凡的世界(167)、深入理解计算机系统(156)。")
 bullet("A5 销售额=price×borrow_count 保留两位，最高《深入理解计算机系统》21684.0 元。")
-bullet("A6 按年借阅量：2024 年 6 条、2025 年 18 条（$dateToString 格式化）。")
-bullet("A7 活跃读者 Top5：R20240005(3)、R20240008(3)、R20240015(2)、R20240002(2)、R20240001(2)。")
-bullet("A8 $lookup 关联读者，学院借阅排行：数学与统计 5、经济管理 5、计算机 5、文学院 4、外国语 3、管理 2（共 24）。")
+bullet("A6 按年借阅量：2023 年 15 条、2024 年 23 条、2025 年 14 条（$dateToString 格式化）。")
+bullet("A7 活跃读者 Top5：R20240001(4)、R20240016(4)、R20240009(4)、R20240002(4)、R20240005(3)。")
+bullet("A8 $lookup 关联读者，学院借阅排行：计算机 13、数学与统计 9、文学 9、管理 7、外国语 7、经济管理 7（共 52）。")
 bullet("A9 用 $merge 将 A1 结果写入 category_stats（5 条）。")
 
 h2("3.3 权限验证（S3）")
@@ -185,15 +181,16 @@ h2("3.4 PyMongo 应用（任务五）")
 body("共 6 个源文件：mongodb_connect.py（连接封装）、book_manager.py、reader_manager.py、"
      "borrow_manager.py、stat_manager.py、main.py。启动时打印连接状态与三集合文档数；"
      "菜单含 9 个功能项，覆盖检索、评分排行、分类统计、借阅趋势、畅销榜、读者分布、新增、借阅、归还；"
-     "每次变更打印受影响文档数，无结果给出提示，退出前关闭连接。实测启动显示 books 20、readers 16、borrow_logs 24（TTL 后）。")
+     "每次变更打印受影响文档数，无结果给出提示，退出前关闭连接。实测启动显示 books 20、readers 16、borrow_logs 52（D1/D2 后）。")
 body("时间序列集合约束处理：borrow_logs 为时间序列集合，MongoDB 不支持对其普通字段更新，"
      "故“归还处理”未用 update_many，而改为 deleteMany 删除在借“借出”记录 + insert_one 追加“已归还”流水，"
      "同一条借阅只保留一条记录（见 borrow_manager.return_book 注释）。")
 
 h1("四、问题与核对")
 h2("4.1 调试难点与排查")
-bullet("时间序列集合“数据变少”：导入 66 条后统计只剩 24 条，排查为 2 年 TTL 自动清理 2024-10 前记录；"
-       "D1/D2 删除演示后再减为 18 条，均属预期行为，非 bug。")
+bullet("时间序列集合“数据变少”：最初 borrow_logs 只能查到 26 条，与导入的 66 条不符。排查为 2 年 TTL"
+       "（expireAfterSeconds=63072000）自动清理了 2024-10 前记录；按要求改为 5 年保留期（157680000），"
+       "重建集合重新导入后 66 条全部保留。这是生命周期参数设置问题，非操作错误。")
 bullet("时间序列集合不支持普通字段更新：最初“归还处理”用 update_many 改 status/return_date 被拒，"
        "改为 deleteMany + insert_one 追加“已归还”流水后正常。")
 bullet("开启 --auth 后程序连不上库：在 mongodb_connect.py 统一使用 libWriter 账号并指定 authSource=admin，"

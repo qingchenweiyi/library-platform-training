@@ -55,7 +55,7 @@ db.create_collection(
 )
 print("  固定集合 book_logs 创建成功 (capped=True, size=1MB, max=1000)")
 
-# (2) 时间序列集合 borrow_logs：时间字段 borrow_date，粒度 hours，2 年过期
+# (2) 时间序列集合 borrow_logs：时间字段 borrow_date，粒度 hours，5 年过期
 db.create_collection(
     "borrow_logs",
     timeseries={
@@ -63,9 +63,9 @@ db.create_collection(
         "metaField": "reader_card",      # 用借阅证号作为元数据
         "granularity": "hours",
     },
-    expireAfterSeconds=63072000,         # 2 年
+    expireAfterSeconds=157680000,          # 5 年（5×365×24×3600）
 )
-print("  时间序列集合 borrow_logs 创建成功 (timeField=borrow_date, granularity=hours, expireAfter=2年)")
+print("  时间序列集合 borrow_logs 创建成功 (timeField=borrow_date, granularity=hours, expireAfter=5年)")
 
 # (3) 视图 book_in_stock：基于 books，过滤 stock > 0
 db.create_collection(
